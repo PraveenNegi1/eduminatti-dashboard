@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, onSnapshot, orderBy, query, doc, deleteDoc } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
+  doc,
+  deleteDoc,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -10,12 +17,14 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 const PAGE_SIZE = 10;
 
 function initials(name = "") {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join("") || "?";
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase())
+      .join("") || "?"
+  );
 }
 
 function timeAgo(ts) {
@@ -29,6 +38,40 @@ function timeAgo(ts) {
   const days = Math.floor(hrs / 24);
   if (days < 30) return `${days}d ago`;
   return ts.toDate().toLocaleDateString();
+}
+
+function formatDate(ts) {
+  if (!ts?.toDate) return "—";
+  return ts.toDate().toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** Keep only unique leads. Newest wins (list is already ordered by createdAt desc). */
+function dedupeLeads(list) {
+  const seen = new Set();
+  const result = [];
+
+  for (const lead of list) {
+    const emailKey = lead.email?.trim().toLowerCase() || null;
+    const phoneKey = lead.phone?.replace(/\D/g, "") || null;
+
+    const key = emailKey
+      ? `email:${emailKey}`
+      : phoneKey
+        ? `phone:${phoneKey}`
+        : `id:${lead.id}`;
+
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(lead);
+  }
+
+  return result;
 }
 
 function DashboardContent() {
@@ -51,30 +94,35 @@ function DashboardContent() {
       (err) => {
         console.error("Leads listener error:", err);
         setLoading(false);
-      }
+      },
     );
     return () => unsubscribe();
   }, []);
 
+  // Unique leads only (newest wins when email/phone match)
+  const uniqueLeads = useMemo(() => dedupeLeads(leads), [leads]);
+
   const filteredLeads = useMemo(() => {
-    if (!search) return leads;
+    if (!search) return uniqueLeads;
     const s = search.toLowerCase();
-    return leads.filter(
+    return uniqueLeads.filter(
       (lead) =>
         lead.name?.toLowerCase().includes(s) ||
         lead.email?.toLowerCase().includes(s) ||
-        lead.phone?.includes(search)
+        lead.phone?.includes(search) ||
+        lead.source?.toLowerCase().includes(s) ||
+        lead.url?.toLowerCase().includes(s),
     );
-  }, [leads, search]);
+  }, [uniqueLeads, search]);
 
-  // Reset to page 1 whenever the search term (or underlying data) changes the result set.
+  // Reset to page 1 whenever the search term changes
   useEffect(() => {
     setPage(1);
   }, [search]);
 
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
 
-  // Keep page in range if leads shrink (e.g. after a delete) while on a later page.
+  // Keep page in range if leads shrink (e.g. after a delete)
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
@@ -104,7 +152,9 @@ function DashboardContent() {
               <h1 className="text-base font-semibold tracking-tight text-[#171B1F] sm:text-lg">
                 Leads
               </h1>
-              <p className="hidden text-xs text-[#6B6F73] sm:block">{user?.email}</p>
+              <p className="hidden text-xs text-[#6B6F73] sm:block">
+                {user?.email}
+              </p>
             </div>
           </div>
           <button
@@ -119,11 +169,11 @@ function DashboardContent() {
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         {/* Stats strip */}
         <div className="mb-6 grid grid-cols-3 gap-3">
-          <StatCard label="Total leads" value={leads.length} />
+          <StatCard label="Total leads" value={uniqueLeads.length} />
           <StatCard
             label="Added today"
             value={
-              leads.filter((l) => {
+              uniqueLeads.filter((l) => {
                 const d = l.createdAt?.toDate?.();
                 if (!d) return false;
                 const today = new Date();
@@ -148,11 +198,15 @@ function DashboardContent() {
               stroke="currentColor"
               strokeWidth={2}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.3-4.3m0 0a7.5 7.5 0 10-10.6 0 7.5 7.5 0 0010.6 0z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 21l-4.3-4.3m0 0a7.5 7.5 0 10-10.6 0 7.5 7.5 0 0010.6 0z"
+              />
             </svg>
             <input
               type="text"
-              placeholder="Search by name, email or mobile..."
+              placeholder="Search by name, email, mobile, source or URL..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-lg border border-[#E7E3D8] bg-white py-2 pl-9 pr-3 text-sm text-[#171B1F] outline-none placeholder:text-[#9A968A] focus:border-[#0E7A6E] focus:ring-1 focus:ring-[#0E7A6E]"
@@ -167,7 +221,7 @@ function DashboardContent() {
           <EmptyState hasSearch={!!search} />
         ) : (
           <>
-            {/* Mobile: card list, scrollable within a fixed-height panel */}
+            {/* Mobile: card list */}
             <div className="sm:hidden">
               <div className="max-h-[65vh] space-y-3 overflow-y-auto pr-1">
                 {pagedLeads.map((lead) => (
@@ -181,9 +235,13 @@ function DashboardContent() {
                           {initials(lead.name)}
                         </div>
                         <div>
-                          <p className="font-medium text-[#171B1F]">{lead.name}</p>
+                          <p className="font-medium text-[#171B1F]">
+                            {lead.name}
+                          </p>
                           {timeAgo(lead.createdAt) && (
-                            <p className="text-xs text-[#9A968A]">{timeAgo(lead.createdAt)}</p>
+                            <p className="text-xs text-[#9A968A]">
+                              {timeAgo(lead.createdAt)}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -197,6 +255,31 @@ function DashboardContent() {
                         <dt className="text-[#9A968A]">Email</dt>
                         <dd className="truncate">{lead.email || "—"}</dd>
                       </div>
+                      <div className="flex justify-between gap-2">
+                        <dt className="text-[#9A968A]">Date</dt>
+                        <dd>{formatDate(lead.createdAt)}</dd>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <dt className="text-[#9A968A]">Source</dt>
+                        <dd className="truncate">{lead.source || "—"}</dd>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <dt className="text-[#9A968A]">URL</dt>
+                        <dd className="max-w-[60%] truncate">
+                          {lead.url ? (
+                            <a
+                              href={lead.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#0E7A6E] hover:underline"
+                            >
+                              {lead.url}
+                            </a>
+                          ) : (
+                            "—"
+                          )}
+                        </dd>
+                      </div>
                     </dl>
                     {(lead.remarks || lead.message) && (
                       <p className="mt-2 line-clamp-2 text-xs text-[#6B6F73]">
@@ -205,7 +288,9 @@ function DashboardContent() {
                     )}
                     <div className="mt-3 flex gap-2 border-t border-[#F0EDE4] pt-3">
                       <button
-                        onClick={() => router.push(`/dashboard/leads/${lead.id}/edit`)}
+                        onClick={() =>
+                          router.push(`/dashboard/leads/${lead.id}/edit`)
+                        }
                         className="flex-1 rounded-lg border border-[#E7E3D8] py-1.5 text-xs font-medium text-[#3A3D40] hover:bg-[#FAF9F6]"
                       >
                         Edit
@@ -222,7 +307,7 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* Desktop: table with sticky header and a scrollable body */}
+            {/* Desktop: table */}
             <div className="hidden overflow-hidden rounded-xl border border-[#E7E3D8] bg-white sm:block">
               <div className="max-h-[65vh] overflow-y-auto overflow-x-auto">
                 <table className="w-full text-left text-sm">
@@ -231,22 +316,34 @@ function DashboardContent() {
                       <th className="px-4 py-3 font-medium">Name</th>
                       <th className="px-4 py-3 font-medium">Mobile Number</th>
                       <th className="px-4 py-3 font-medium">Email</th>
+                      <th className="px-4 py-3 font-medium">Date</th>
+                      <th className="px-4 py-3 font-medium">Source</th>
+                      <th className="px-4 py-3 font-medium">URL</th>
                       <th className="px-4 py-3 font-medium">Remarks</th>
-                      <th className="px-4 py-3 text-right font-medium">Action</th>
+                      <th className="px-4 py-3 text-right font-medium">
+                        Action
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#F0EDE4]">
                     {pagedLeads.map((lead) => (
-                      <tr key={lead.id} className="group bg-white transition hover:bg-[#FAF9F6]">
+                      <tr
+                        key={lead.id}
+                        className="group bg-white transition hover:bg-[#FAF9F6]"
+                      >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0E7A6E]/10 text-xs font-semibold text-[#0E7A6E]">
                               {initials(lead.name)}
                             </div>
                             <div>
-                              <p className="font-medium text-[#171B1F]">{lead.name}</p>
+                              <p className="font-medium text-[#171B1F]">
+                                {lead.name}
+                              </p>
                               {timeAgo(lead.createdAt) && (
-                                <p className="text-xs text-[#9A968A]">{timeAgo(lead.createdAt)}</p>
+                                <p className="text-xs text-[#9A968A]">
+                                  {timeAgo(lead.createdAt)}
+                                </p>
                               )}
                             </div>
                           </div>
@@ -257,13 +354,36 @@ function DashboardContent() {
                         <td className="px-4 py-3 font-mono text-xs text-[#3A3D40]">
                           {lead.email || "—"}
                         </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-xs text-[#3A3D40]">
+                          {formatDate(lead.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-[#3A3D40]">
+                          {lead.source || "—"}
+                        </td>
+                        <td className="max-w-[160px] truncate px-4 py-3 text-xs">
+                          {lead.url ? (
+                            <a
+                              href={lead.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#0E7A6E] hover:underline"
+                              title={lead.url}
+                            >
+                              {lead.url}
+                            </a>
+                          ) : (
+                            <span className="text-[#6B6F73]">—</span>
+                          )}
+                        </td>
                         <td className="max-w-xs truncate px-4 py-3 text-[#6B6F73]">
                           {lead.remarks || lead.message || "—"}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2 opacity-70 transition group-hover:opacity-100">
                             <button
-                              onClick={() => router.push(`/dashboard/leads/${lead.id}/edit`)}
+                              onClick={() =>
+                                router.push(`/dashboard/leads/${lead.id}/edit`)
+                              }
                               className="rounded-lg border border-[#E7E3D8] px-3 py-1.5 text-xs font-medium text-[#3A3D40] hover:bg-white"
                             >
                               Edit
@@ -306,12 +426,18 @@ function DashboardContent() {
   );
 }
 
-function Pagination({ page, totalPages, onChange, rangeStart, rangeEnd, total }) {
+function Pagination({
+  page,
+  totalPages,
+  onChange,
+  rangeStart,
+  rangeEnd,
+  total,
+}) {
   if (totalPages <= 1) return null;
 
   const pages = [];
   for (let i = 1; i <= totalPages; i++) {
-    // Show first, last, current, and neighbors; collapse the rest with "…"
     if (i === 1 || i === totalPages || Math.abs(i - page) <= 1) {
       pages.push(i);
     } else if (pages[pages.length - 1] !== "…") {
@@ -322,8 +448,11 @@ function Pagination({ page, totalPages, onChange, rangeStart, rangeEnd, total })
   return (
     <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
       <p className="text-xs text-[#9A968A]">
-        Showing <span className="font-medium text-[#3A3D40]">{rangeStart}–{rangeEnd}</span> of{" "}
-        <span className="font-medium text-[#3A3D40]">{total}</span>
+        Showing{" "}
+        <span className="font-medium text-[#3A3D40]">
+          {rangeStart}–{rangeEnd}
+        </span>{" "}
+        of <span className="font-medium text-[#3A3D40]">{total}</span>
       </p>
 
       <div className="flex items-center gap-1">
@@ -352,7 +481,7 @@ function Pagination({ page, totalPages, onChange, rangeStart, rangeEnd, total })
             >
               {p}
             </button>
-          )
+          ),
         )}
 
         <button
@@ -371,7 +500,9 @@ function StatCard({ label, value }) {
   return (
     <div className="rounded-xl border border-[#E7E3D8] bg-white px-4 py-3">
       <p className="text-xs uppercase tracking-wide text-[#9A968A]">{label}</p>
-      <p className="mt-1 text-xl font-semibold tracking-tight text-[#171B1F]">{value}</p>
+      <p className="mt-1 text-xl font-semibold tracking-tight text-[#171B1F]">
+        {value}
+      </p>
     </div>
   );
 }
@@ -397,7 +528,7 @@ function EmptyState({ hasSearch }) {
       </p>
       <p className="mt-1 text-sm text-[#9A968A]">
         {hasSearch
-          ? "Try a different name, email, or mobile number."
+          ? "Try a different name, email, mobile, source, or URL."
           : "New leads will show up here as soon as they come in."}
       </p>
     </div>
@@ -418,7 +549,8 @@ function ConfirmDeleteModal({ lead, onCancel, onConfirm }) {
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
         <h2 className="text-lg font-semibold text-[#171B1F]">Delete lead?</h2>
         <p className="mt-2 text-sm text-[#6B6F73]">
-          This will permanently remove <span className="font-medium text-[#171B1F]">{lead.name}</span> from
+          This will permanently remove{" "}
+          <span className="font-medium text-[#171B1F]">{lead.name}</span> from
           your leads. This can&apos;t be undone.
         </p>
 
