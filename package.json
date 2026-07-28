@@ -18,5 +18,8 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "tailwindcss": "^4"
+  },
+  "overrides": {
+    "jose": "^4.15.9"
   }
 }
