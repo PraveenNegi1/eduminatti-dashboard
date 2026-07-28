@@ -1,6 +1,8 @@
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
+
+// firebase-admin needs Node.js APIs and cannot run on the Edge runtime.
+export const runtime = "nodejs";
 
 // If your form always posts from a known domain, replace "*" with that
 // exact origin (e.g. "https://www.eduminatti.com") for tighter security.
@@ -39,7 +41,7 @@ export async function POST(req) {
       message: message || "",
       source: source || "unknown",
       status: "new", // new | contacted | converted | rejected
-      createdAt: FieldValue.serverTimestamp(),
+      createdAt: new Date(),
     });
 
     return NextResponse.json(
