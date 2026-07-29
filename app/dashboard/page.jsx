@@ -119,7 +119,6 @@ function DashboardContent() {
 
   const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
 
-  // Keep page in range if leads shrink (e.g. after a delete)
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
