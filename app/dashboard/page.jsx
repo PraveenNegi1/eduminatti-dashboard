@@ -302,7 +302,6 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* Desktop: table */}
             <div className="hidden overflow-hidden rounded-xl border border-[#E7E3D8] bg-white sm:block">
               <div className="max-h-[65vh] overflow-y-auto overflow-x-auto">
                 <table className="w-full text-left text-sm">
