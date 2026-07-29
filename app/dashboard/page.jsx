@@ -210,7 +210,6 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Content */}
         {loading ? (
           <LoadingState />
         ) : filteredLeads.length === 0 ? (
