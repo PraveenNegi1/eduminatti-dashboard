@@ -113,7 +113,6 @@ function DashboardContent() {
     );
   }, [uniqueLeads, search]);
 
-  // Reset to page 1 whenever the search term changes
   useEffect(() => {
     setPage(1);
   }, [search]);
