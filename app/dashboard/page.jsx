@@ -98,7 +98,6 @@ function DashboardContent() {
     return () => unsubscribe();
   }, []);
 
-  // Unique leads only (newest wins when email/phone match)
   const uniqueLeads = useMemo(() => dedupeLeads(leads), [leads]);
 
   const filteredLeads = useMemo(() => {
