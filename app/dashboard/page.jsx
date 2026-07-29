@@ -51,7 +51,6 @@ function formatDate(ts) {
   });
 }
 
-/** Keep only unique leads. Newest wins (list is already ordered by createdAt desc). */
 function dedupeLeads(list) {
   const seen = new Set();
   const result = [];
