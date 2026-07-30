@@ -19,7 +19,6 @@ export default function ExampleLeadForm({ source = "website-form" }) {
     e.preventDefault();
     setStatus("submitting");
     try {
-      // replace the relative path below with the full URL, e.g.
       // "https://dashboard.yourdomain.com/api/leads"
       const res = await fetch("/api/leads", {
         method: "POST",
