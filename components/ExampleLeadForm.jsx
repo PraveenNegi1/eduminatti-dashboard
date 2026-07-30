@@ -1,6 +1,5 @@
 "use client";
 
-// (using a realtime listener) picks it up instantly — no page refresh needed.
 
 import { useState } from "react";
 
