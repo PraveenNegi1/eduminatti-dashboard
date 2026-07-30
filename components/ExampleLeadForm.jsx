@@ -15,7 +15,6 @@ export default function ExampleLeadForm({ source = "website-form" }) {
     e.preventDefault();
     setStatus("submitting");
     try {
-      // "https://dashboard.yourdomain.com/api/leads"
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
