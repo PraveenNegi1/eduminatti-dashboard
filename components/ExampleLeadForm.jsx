@@ -1,6 +1,5 @@
 "use client";
 
-// Drop a version of this into ANY of your sites (school platform, aviation academy,
 // travel site, etc.) — just change the "source" value so you know where each lead came from.
 // It POSTs straight to /api/leads, which saves it in Firestore and the dashboard
 // (using a realtime listener) picks it up instantly — no page refresh needed.
