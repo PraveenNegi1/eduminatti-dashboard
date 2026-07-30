@@ -1,6 +1,5 @@
 "use client";
 
-// It POSTs straight to /api/leads, which saves it in Firestore and the dashboard
 // (using a realtime listener) picks it up instantly — no page refresh needed.
 
 import { useState } from "react";
