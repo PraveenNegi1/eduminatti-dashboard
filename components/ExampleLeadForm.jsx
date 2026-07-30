@@ -19,7 +19,6 @@ export default function ExampleLeadForm({ source = "website-form" }) {
     e.preventDefault();
     setStatus("submitting");
     try {
-      // If the dashboard app is deployed separately from this website,
       // replace the relative path below with the full URL, e.g.
       // "https://dashboard.yourdomain.com/api/leads"
       const res = await fetch("/api/leads", {
