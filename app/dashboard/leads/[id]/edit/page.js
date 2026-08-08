@@ -5,10 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/context/AuthContext";
+import Image from "next/image";
+import Link from "next/link";
 
 function EditLeadContent() {
   const { id } = useParams();
   const router = useRouter();
+  const { user, logout } = useAuth();
 
   const [form, setForm] = useState({ name: "", phone: "", email: "", remarks: "" });
   const [loading, setLoading] = useState(true);
@@ -25,11 +29,12 @@ function EditLeadContent() {
           setNotFound(true);
         } else {
           const data = snap.data();
+          console.log("Loaded lead:", data);
           setForm({
             name: data.name || "",
             phone: data.phone || "",
             email: data.email || "",
-            remarks: data.remarks || data.message || "",
+            remarks: data.remarks || "",
           });
         }
       } catch (err) {
@@ -119,8 +124,24 @@ function EditLeadContent() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F6]">
-      <header className="sticky top-0 z-10 border-b border-[#E7E3D8] bg-[#FAF9F6]/90 backdrop-blur">
-        <div className="mx-auto flex max-w-xl items-center gap-3 px-4 py-4">
+      <header className="sticky top-0 z-10 border-b border-[#E7E3D8] bg-[#FAF9F6]">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard" className="flex items-center gap-3">
+              <Image className="h-10 w-50" src="/logo.png" alt="Eduminatti" width={320} height={32} />
+            </Link>
+          </div>
+          <button
+            onClick={logout}
+            className="rounded-lg border border-[#E7E3D8] px-3 py-1.5 text-sm font-medium text-[#3A3D40] transition hover:border-[#171B1F] hover:bg-white"
+          >
+            Log out
+          </button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-xl px-4 py-6">
+        <div className="mx-auto flex max-w-xl items-center gap-3 py-4">
           <button
             onClick={() => router.push("/dashboard")}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E7E3D8] text-[#3A3D40] hover:bg-white"
@@ -132,9 +153,6 @@ function EditLeadContent() {
           </button>
           <h1 className="text-base font-semibold tracking-tight text-[#171B1F]">Edit lead</h1>
         </div>
-      </header>
-
-      <main className="mx-auto max-w-xl px-4 py-6">
         <form
           onSubmit={handleSubmit}
           className="space-y-5 rounded-2xl border border-[#E7E3D8] bg-white p-6"
@@ -145,7 +163,8 @@ function EditLeadContent() {
               value={form.name}
               onChange={handleChange("name")}
               placeholder="Full name"
-              className={inputClass(errors.name)}
+              className={`${inputClass(errors.name)} opacity-70 cursor-not-allowed`}
+              disabled
             />
           </Field>
 
@@ -154,8 +173,9 @@ function EditLeadContent() {
               type="tel"
               value={form.phone}
               onChange={handleChange("phone")}
-              placeholder="+91 98765 43210"
-              className={`${inputClass(errors.phone)} font-mono`}
+              placeholder="-"
+              className={`${inputClass(errors.phone)} font-mono opacity-70 cursor-not-allowed`}
+              disabled
             />
           </Field>
 
@@ -164,8 +184,9 @@ function EditLeadContent() {
               type="email"
               value={form.email}
               onChange={handleChange("email")}
-              placeholder="name@example.com"
-              className={`${inputClass(errors.email)} font-mono`}
+              placeholder="-"
+              className={`${inputClass(errors.email)} font-mono opacity-70 cursor-not-allowed`}
+              disabled
             />
           </Field>
 
@@ -208,8 +229,8 @@ function EditLeadContent() {
 function Field({ label, error, children }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[#9A968A]">
-        {label}
+      <span className="mb-1.5 block text-xs font-medium tracking-wide p-1">
+        {label}:
       </span>
       {children}
       {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}

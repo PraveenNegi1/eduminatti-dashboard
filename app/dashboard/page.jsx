@@ -13,6 +13,8 @@ import {
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import Image from "next/image";
+import Link from "next/link";
 
 const PAGE_SIZE = 10;
 
@@ -81,6 +83,7 @@ function DashboardContent() {
   const [search, setSearch] = useState("");
   const [deletingLead, setDeletingLead] = useState(null);
   const [page, setPage] = useState(1);
+  const [selectedLead, setSelectedLead] = useState(null);
 
   useEffect(() => {
     const q = query(collection(db, "leads"), orderBy("createdAt", "desc"));
@@ -141,17 +144,15 @@ function DashboardContent() {
       <header className="sticky top-0 z-10 border-b border-[#E7E3D8] bg-[#FAF9F6]/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0E7A6E] text-sm font-semibold text-white">
-              L
-            </div>
-            <div>
-              <h1 className="text-base font-semibold tracking-tight text-[#171B1F] sm:text-lg">
-                Leads
-              </h1>
-              <p className="hidden text-xs text-[#6B6F73] sm:block">
-                {user?.email}
-              </p>
-            </div>
+            <Link href="/dashboard" className="flex items-center gap-3">
+              <Image
+                className="h-10 w-50"
+                src="/logo.png"
+                alt="Eduminatti"
+                width={320}
+                height={32}
+              />
+            </Link>
           </div>
           <button
             onClick={logout}
@@ -302,59 +303,50 @@ function DashboardContent() {
               </div>
             </div>
 
-            <div className="hidden overflow-hidden rounded-xl border border-[#E7E3D8] bg-white sm:block">
-              <div className="max-h-[65vh] overflow-y-auto overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="sticky top-0 z-[1] border-b border-[#E7E3D8] bg-[#F5F3EC] text-xs uppercase tracking-wide text-[#8A8677]">
+            <div className="hidden border border-[#E7E3D8] bg-white sm:block">
+              <div className="max-h-[65vh] overflow-y-auto overflow-x-auto custom-scrollbar">
+                <table className="w-full min-w-240 table-fixed text-left text-sm">
+                  <thead className="sticky top-0 z-1 border-b border-[#E7E3D8] bg-[#F5F3EC] text-xs uppercase text-[#8A8677] text-left rounded-xl">
                     <tr>
-                      <th className="px-4 py-3 font-medium">Name</th>
-                      <th className="px-4 py-3 font-medium">Mobile Number</th>
-                      <th className="px-4 py-3 font-medium">Email</th>
-                      <th className="px-4 py-3 font-medium">Date</th>
-                      <th className="px-4 py-3 font-medium">Source</th>
-                      <th className="px-4 py-3 font-medium">URL</th>
-                      <th className="px-4 py-3 font-medium">Remarks</th>
-                      <th className="px-4 py-3 text-right font-medium">
-                        Action
-                      </th>
+                      <th className="px-4 py-2 font-medium">Name</th>
+                      <th className="px-4 py-2 font-medium">Mobile Number</th>
+                      <th className="px-4 py-2 font-medium">Email</th>
+                      <th className="px-4 py-2 font-medium">Date</th>
+                      {/* <th className="px-4 py-2 font-medium">Source</th>
+                      <th className="px-4 py-2 font-medium">URL</th> */}
+                      <th className="px-4 py-2 font-medium">Remarks</th>
+                      <th className="px-4 py-2 font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#F0EDE4]">
                     {pagedLeads.map((lead) => (
                       <tr
                         key={lead.id}
-                        className="group bg-white transition hover:bg-[#FAF9F6]"
+                        onClick={() => setSelectedLead(lead)}
+                        className="group bg-white transition hover:bg-[#FAF9F6] cursor-pointer"
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-2 overflow-hidden">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0E7A6E]/10 text-xs font-semibold text-[#0E7A6E]">
-                              {initials(lead.name)}
-                            </div>
                             <div>
-                              <p className="font-medium text-[#171B1F]">
+                              <p className="truncate font-medium text-[#171B1F]">
                                 {lead.name}
                               </p>
-                              {timeAgo(lead.createdAt) && (
-                                <p className="text-xs text-[#9A968A]">
-                                  {timeAgo(lead.createdAt)}
-                                </p>
-                              )}
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs text-[#3A3D40]">
+                        <td className="whitespace-nowrap px-4 py-2 font-mono text-sm text-[#3A3D40]">
                           {lead.phone || "—"}
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs text-[#3A3D40]">
+                        <td className="truncate px-4 py-2 font-mono text-xs text-[#3A3D40]">
                           {lead.email || "—"}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-xs text-[#3A3D40]">
+                        <td className="whitespace-nowrap px-4 py-2 text-xs text-[#3A3D40]">
                           {formatDate(lead.createdAt)}
                         </td>
-                        <td className="px-4 py-3 text-xs text-[#3A3D40]">
+                        {/* <td className="truncate px-4 py-3 text-xs text-[#3A3D40]">
                           {lead.source || "—"}
                         </td>
-                        <td className="max-w-[160px] truncate px-4 py-3 text-xs">
+                        <td className="truncate px-4 py-3 text-xs">
                           {lead.url ? (
                             <a
                               href={lead.url}
@@ -368,23 +360,23 @@ function DashboardContent() {
                           ) : (
                             <span className="text-[#6B6F73]">—</span>
                           )}
+                        </td> */}
+                        <td className="truncate px-4 py-2 text-[#6B6F73]">
+                          {lead.remarks || "—"}
                         </td>
-                        <td className="max-w-xs truncate px-4 py-3 text-[#6B6F73]">
-                          {lead.remarks || lead.message || "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-2 opacity-70 transition group-hover:opacity-100">
+                        <td className="px-4 py-2">
+                          <div className="flex justify-end gap-2 transition">
                             <button
                               onClick={() =>
                                 router.push(`/dashboard/leads/${lead.id}/edit`)
                               }
-                              className="rounded-lg border border-[#E7E3D8] px-3 py-1.5 text-xs font-medium text-[#3A3D40] hover:bg-white"
+                              className="rounded-lg border border-[#E7E3D8] px-4 py-2 text-xs font-medium text-white bg-[#0E7A6E] hover:bg-[#0c5f55] cursor-pointer"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => setDeletingLead(lead)}
-                              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 cursor-pointer"
                             >
                               Delete
                             </button>
@@ -406,6 +398,113 @@ function DashboardContent() {
               total={filteredLeads.length}
             />
           </>
+        )}
+
+        {selectedLead && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+            onClick={() => setSelectedLead(null)}
+          >
+            <div
+              className="w-full max-w-md rounded-xl border border-[#E7E3D8] bg-white p-6 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-start justify-between">
+                <div>
+                  <p className="text-lg font-semibold text-[#171B1F]">
+                    Lead Details
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedLead(null)}
+                  className="text-[#3A3D40] cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-3 text-sm overflow-y-auto max-h-96 custom-scrollbar p-2">
+                <div>
+                  <p className="text-lg font-semibold text-[#171B1F]">
+                    {selectedLead.name}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-[#8A8677]">
+                    Mobile
+                  </p>
+                  <p className="font-mono text-[#3A3D40]">
+                    {selectedLead.phone || "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-[#8A8677]">
+                    Email
+                  </p>
+                  <p className="font-mono text-[#3A3D40]">
+                    {selectedLead.email || "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-[#8A8677]">
+                    Date
+                  </p>
+                  <p className="text-[#3A3D40]">
+                    {formatDate(selectedLead.createdAt)}
+                  </p>
+                  <p className="text-xs text-[#9A968A]">
+                    {timeAgo(selectedLead.createdAt)}
+                  </p>
+                </div>
+                <div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-[#8A8677]">
+                      Source
+                    </p>
+                    <p className="break-all text-[#3A3D40]">
+                      {selectedLead.message || "—"}
+                    </p>
+                  </div>
+
+                  <p className="text-xs uppercase tracking-wide text-[#8A8677]">
+                    URL
+                  </p>
+                  {selectedLead.source ? (
+                    <p className="break-all">{selectedLead.source}</p>
+                  ) : (
+                    <p className="text-[#6B6F73]">—</p>
+                  )}
+                </div>
+                <div className="mb-2">
+                  <p className="text-xs uppercase tracking-wide text-[#8A8677]">
+                    Remarks
+                  </p>
+                  <p className="whitespace-pre-wrap text-[#3A3D40]">
+                    {selectedLead.remarks || "—"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="w-full h-px bg-[#4a4a4b] opacity-40" />
+
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  onClick={() =>
+                    router.push(`/dashboard/leads/${selectedLead.id}/edit`)
+                  }
+                  className="rounded-lg border border-[#E7E3D8] px-4 py-1.5 text-xs font-medium text-white bg-[#0E7A6E] hover:bg-[#0c5f55]"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setDeletingLead(selectedLead)}
+                  className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
 
@@ -492,8 +591,8 @@ function Pagination({
 
 function StatCard({ label, value }) {
   return (
-    <div className="rounded-xl border border-[#E7E3D8] bg-white px-4 py-3">
-      <p className="text-xs uppercase tracking-wide text-[#9A968A]">{label}</p>
+    <div className="rounded-xl border border-[#E7E3D8] bg-white px-4 py-3 flex flex-col items-center justify-center h-30 w-60">
+      <p className="text-sm uppercase tracking-wide text-[#171B1F]">{label}</p>
       <p className="mt-1 text-xl font-semibold tracking-tight text-[#171B1F]">
         {value}
       </p>
